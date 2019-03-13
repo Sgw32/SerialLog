@@ -18,6 +18,7 @@ namespace SerialLog
         private static Thread _readThread;
         private static System.Timers.Timer _timer;
         private static string _dataBuffer;
+        private static bool dirty;
         private static string _filename;
 
         private static bool listening;
@@ -37,6 +38,7 @@ namespace SerialLog
 
         private static void Main(string[] args)
         {
+            dirty = true;
             _filename = DateTime.Now.ToString("yyyyMMdd_HHmmss") + ".txt";
             Console.BackgroundColor = ConsoleColor.Black;
             ConsoleHelper.FixEncoding();
@@ -118,26 +120,31 @@ namespace SerialLog
 
         private static void OnTimed(object sender, ElapsedEventArgs e)
         {
-            string timestamp = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss.fff");
-            string file = AppDomain.CurrentDomain.BaseDirectory + "\\datalogs\\" + _filename;
-
-            try
+            if (dirty)
             {
-                using (StreamWriter writer = new StreamWriter(file, true))
+                dirty = false;
+                string timestamp = DateTime.Now.ToString("yyyy-MM-dd - HH:mm:ss:fff");
+                string timestamp2 = DateTime.Now.ToString("yyyy-MM-dd")+".log";
+                string file = AppDomain.CurrentDomain.BaseDirectory + "\\datalogs\\" + timestamp2;
+
+                try
                 {
-                    writer.WriteLine(string.Format("[{0}] {1}", timestamp, _dataBuffer.TrimEnd(Environment.NewLine.ToCharArray())));
+                    using (StreamWriter writer = new StreamWriter(file, true))
+                    {
+                        writer.WriteLine(string.Format("[{0}] {1}", timestamp, _dataBuffer.TrimEnd(Environment.NewLine.ToCharArray())));
+                    }
                 }
-            }
-            catch (Exception ex)
-            {
-                Commons.ShowError(ex.ToString());
-                ConsoleHelper.Wait();
-            }
+                catch (Exception ex)
+                {
+                    Commons.ShowError(ex.ToString());
+                    ConsoleHelper.Wait();
+                }
 
-            ConsoleHelper.Write("Logged at ", ConsoleColor.DarkGray);
-            ConsoleHelper.Write(string.Format("{0}", timestamp), ConsoleColor.Green);
-            ConsoleHelper.Write(" : ", ConsoleColor.Red);
-            Console.WriteLine(_dataBuffer);
+                ConsoleHelper.Write("Logged at ", ConsoleColor.DarkGray);
+                ConsoleHelper.Write(string.Format("{0}", timestamp), ConsoleColor.Green);
+                ConsoleHelper.Write(" : ", ConsoleColor.Red);
+                Console.WriteLine(_dataBuffer);
+            }
         }
 
         private static void InterpretInput(string input)
@@ -382,6 +389,7 @@ namespace SerialLog
                     //Console.WriteLine(data);
 
                     _dataBuffer = data;
+                    dirty = true;
                 }
                 catch (TimeoutException) { }
             }
